@@ -29,17 +29,30 @@
 (define (read-ck3-file port)
   (define original-port (current-input-port))
   (current-input-port port)
-  (let ((result (read-mapping)))
+  (let ((result (read-mapping-debug)))
     (close-input-port port)
     (current-input-port original-port)
     result))
 
 ; reads a list of foo=bar lines.
-(define (read-mapping (acc '()))
+(define (read-mapping (acc '()) (debug values))
   (skip-whitespace)
   (if (consume-structure-end?)
       (reverse acc)
-      (read-mapping (cons (cons (read-word-and-eat-next-char  #\=) (read-value)) acc))))
+      (read-mapping (cons
+                     (debug (cons (read-word-and-eat-next-char #\=) (read-value)))
+                     acc)
+                    debug)))
+
+(define (read-mapping-debug)
+  (read-mapping '()
+                (lambda (k-v)
+                  (display (format "Handling ~a: ~a\n"
+                          (car k-v)
+                          (if (list? (cdr k-v))
+                              (format "~a elements" (length (cdr k-v)))
+                              "atom")))
+                  k-v)))
 
 (define (skip-whitespace)
   (when (member (peek-char) '(#\tab #\  #\newline) eq?)
@@ -139,3 +152,24 @@
 
 (define (read-short-gamestate) (open-and-read-ck3-file "/Users/cauet/Documents/gamestate_start"))
 (define (read-gamestate) (open-and-read-ck3-file "/Users/cauet/Documents/gamestate"))
+
+
+; trace lines start with "> > >" or "< < <"
+(define *trace* #f)
+(define (enough-carets? n)
+  (define (carets-count-higher-than lst goal)
+    (cond
+      ((zero? goal) #t)
+      ((null? lst) #f)
+      ((member (car lst) '(#\> #\<)) (carets-count-higher-than (cddr lst) (- goal 1)))
+      (else #f)))
+  (lambda (s) (carets-count-higher-than (string->list s) n)))
+
+(define (trace-if pred)
+  (lambda (s) (when (pred s) (display s) (newline))))
+
+(require racket/trace)
+
+(when *trace*
+  (trace read-mapping read-list read-value read-structure)
+  (current-trace-notify (trace-if (enough-carets? 6))))
