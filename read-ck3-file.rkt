@@ -19,7 +19,7 @@
 ; * each list is a list
 ; * base values are atoms  # note: we should produce either symbols, number, strings.
 
-(provide open-and-read-ck3-file read-ck3-file read-gamestate)
+(provide open-and-read-ck3-file read-ck3-file read-short-gamestate read-gamestate)
 
 ; opens and reads the save at the given path into a sexp.
 (define (open-and-read-ck3-file path)
@@ -137,5 +137,5 @@
         (next-line (read-line)))
     (format "at position ~s, next bits: ~s ~s" position this-line next-line)))
 
-(define (read-short-gamestate) (open-and-read-ck3-file "/Users/cauet/gamestate_start"))
-(define (read-gamestate) (open-and-read-ck3-file "/Users/cauet/gamestate"))
+(define (read-short-gamestate) (open-and-read-ck3-file "/Users/cauet/Documents/gamestate_start"))
+(define (read-gamestate) (open-and-read-ck3-file "/Users/cauet/Documents/gamestate"))
