@@ -109,7 +109,7 @@
 ; if we have a list, we return it.
 (define (read-value)
   (if (eq? (peek-char) #\{)
-      (read-structure)
+      (begin (read-char) (read-structure))
       (let ((word (read-next-word)))
         (if (equal? word "rgb")
             (begin (eat-next-char #\ )
@@ -118,23 +118,24 @@
             word))))
 
 ; reads the upcoming {...} structure into a mapping or a list depending on
-; whether a = can be found after the next word.
-(define (read-structure)
-  (unless (eq? (read-char) #\{) (error (string-append "read-structure not starting on '{'!, " (error-context))))
+; whether a = can be found after the next word. { already eaten.
+(define (read-structure (acc '()))
   (skip-whitespace)
   (cond
     ; empty structure
-    ((consume-structure-end?) '())
+    ((consume-structure-end?) (reverse acc))
     ; nested list
     ((eq? (peek-char) #\{) (read-list))
     (else
-     ; read the next word to determine if it's a mapping or a list
      (let ((word (read-next-word))
            (next-char (read-char)))
-       (cond
-         ((eq? next-char #\=) (read-mapping (list (cons word (read-value)))))
-         ((eq? next-char #\ ) (read-list (list word)))
-         (else (error (string-append "char is not equal or space but '" (string next-char) "', " (error-context)))))))))
+       (read-structure
+        (cons
+         (cond
+         ((eq? next-char #\=) (cons word (read-value)))
+         ((eq? next-char #\ ) word)
+         (else (error (string-append "char is not equal or space but '" (string next-char) "', " (error-context)))))
+         acc))))))
 
 ; reads a list of integers, strings or structures.
 (define (read-list (acc '()))
