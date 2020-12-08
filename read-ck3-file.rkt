@@ -25,7 +25,7 @@
 (define (open-and-read-ck3-file path)
   (read-ck3-file (open-input-file path)))
 
-; reads the given port into a sex and closes it.
+; reads the given port into a sexp and closes it.
 (define (read-ck3-file port)
   (define original-port (current-input-port))
   (current-input-port port)
@@ -35,13 +35,11 @@
     result))
 
 ; reads a list of foo=bar lines.
-(define (read-mapping)
-  (reverse
-   (let loop ((acc '()))
-     (skip-whitespace)
-     (if (consume-structure-end?)
-         acc
-         (loop (cons (cons (read-word-and-eat-next-char  #\=) (read-value)) acc))))))
+(define (read-mapping (acc '()))
+  (skip-whitespace)
+  (if (consume-structure-end?)
+      (reverse acc)
+      (read-mapping (cons (cons (read-word-and-eat-next-char  #\=) (read-value)) acc))))
 
 (define (skip-whitespace)
   (when (member (peek-char) '(#\tab #\  #\newline) eq?)
@@ -103,7 +101,7 @@
         (if (equal? word "rgb")
             (begin (eat-next-char #\ )
                    (eat-next-char #\{)
-                   (cons 'rgb (read-list)))
+                   (read-list '(rgb)))
             word))))
 
 ; reads the upcoming {...} structure into a mapping or a list depending on
@@ -121,18 +119,17 @@
      (let ((word (read-next-word))
            (next-char (read-char)))
        (cond
-         ((consume-structure-end?) '())
-         ((eq? next-char #\=) (cons (cons word (read-value)) (read-mapping)))
-         ((eq? next-char #\ ) (cons word (read-list)))
-         (else ((error (string-append "char is not equal or space but '" (string next-char) "', " (error-context))))))))))
+         ((eq? next-char #\=) (read-mapping (list (cons word (read-value)))))
+         ((eq? next-char #\ ) (read-list (list word)))
+         (else (error (string-append "char is not equal or space but '" (string next-char) "', " (error-context)))))))))
 
 ; reads a list of integers, strings or structures.
-(define (read-list)
+(define (read-list (acc '()))
   (if (consume-structure-end?)
-      '()
+      (reverse acc)
       (let ((item (read-value)))
         (skip-whitespace)
-        (cons item (read-list)))))
+        (read-list (cons item acc)))))
 
 (define (error-context)
   (let ((position (file-position (current-input-port)))
