@@ -127,3 +127,10 @@ date=1170.3.22
    ("no_automatic_claims" . "yes")
    ("definite_form" . "yes")
    ("coat_of_arms_id" . 2191))))
+
+(define hybrid-structure-string "levels={ 10 0=1 1=2 }")
+(define hybrid-structure (read-ck3-file (open-input-string hybrid-structure-string)))
+(check-equal? hybrid-structure '(("levels"
+   10
+   (0 . 1)
+   (1 . 2))))
