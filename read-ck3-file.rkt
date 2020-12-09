@@ -29,30 +29,10 @@
 (define (read-ck3-file port)
   (define original-port (current-input-port))
   (current-input-port port)
-  (let ((result (read-mapping-debug)))
+  (let ((result (read-structure)))
     (close-input-port port)
     (current-input-port original-port)
     result))
-
-; reads a list of foo=bar lines.
-(define (read-mapping (acc '()) (debug values))
-  (skip-whitespace)
-  (if (consume-structure-end?)
-      (reverse acc)
-      (read-mapping (cons
-                     (debug (cons (read-word-and-eat-next-char #\=) (read-value)))
-                     acc)
-                    debug)))
-
-(define (read-mapping-debug)
-  (read-mapping '()
-                (lambda (k-v)
-                  (display (format "Handling ~a: ~a\n"
-                          (car k-v)
-                          (if (list? (cdr k-v))
-                              (format "~a elements" (length (cdr k-v)))
-                              "atom")))
-                  k-v)))
 
 (define (skip-whitespace)
   (when (member (peek-char) '(#\tab #\  #\newline) eq?)
@@ -71,7 +51,7 @@
 ; reads the next word and swallows next-char.
 (define (read-word-and-eat-next-char next-char)
   (let ((word (read-next-word)))
-    (eat-next-char  next-char)
+    (eat-next-char next-char)
     word))
 
 ; eats the next character, checking it has the expected value.
@@ -84,22 +64,29 @@
 ; Note: quoted strings get unquoted. Upate that when parsing supports generating symbols.
 (define (read-next-word)
   (skip-whitespace)
-  (define (read-as-list-until sentinels consume?)
-    (cond
-      ((member (peek-char) sentinels) (when consume? (read-char)) '())
-      (else (cons (read-char) (read-as-list-until sentinels consume?)))))
-  (maybe-parse (list->string
+  (define (read-as-list-until sentinels consume? (acc '()))
+    (if (member (peek-char) sentinels)
+        (if consume? (cons (read-char) acc) acc)
+        (read-as-list-until sentinels consume? (cons (read-char) acc))))
+  (maybe-parse (list->string (reverse
                 (cond
-                  ((eq? (peek-char) #\") (read-char) (read-as-list-until '(#\") #t))
-                  (else (read-as-list-until '(#\= #\newline #\ ) #f))))))
+                  ((eq? (peek-char) #\") (read-as-list-until '(#\") #t (list (read-char))))
+                  (else (read-as-list-until '(#\= #\newline #\ ) #f)))))))
 
-; tries parsing the string as a nummber and returns it, or returns the string.
-; TODO: also do symbols, dates, etc.
-; Note: the following would parse a date:
-; ((regexp-match #px"^([\\d]{3,4})\\.([\\d]{1,2})\\.([\\d]{1,2})$" base-value) => (lambda (matches)
-;                                                          (cons 'date (cdr matches))))
 (define (maybe-parse s)
   (or (string->number s) s))
+
+; tries parsing the list of chars as a string, a number, a date or a symbol.
+(define (parse s)
+    (cond
+     ;((null? lst) (error (format "Gotta parse ~a/~a! ~a" lst s (error-context))))
+      ;((null? s) "NULL")
+      ((eq? (car (string->list s)) #\") (substring s 1 (sub1 (string-length substring))))
+      ((string->number s) => values)
+      ((regexp-match
+        #px"^([\\d]{3,4})\\.([\\d]{1,2})\\.([\\d]{1,2})$" s) => (lambda (matches) (cons 'date (map string->number (cdr matches)))))
+      (else (string->symbol s))))
+
 
 ; reads the value as an atom or a {....} structure or a rgb spec.
 ; {...} is either a mapping or a list of integers or strings.
@@ -122,9 +109,9 @@
 (define (read-structure (acc '()))
   (skip-whitespace)
   (cond
-    ; empty structure
     ((consume-structure-end?) (reverse acc))
     ; nested list
+    ; ((eq? (peek-char) #\{) (read-char) (cons (read-structure) acc))
     ((eq? (peek-char) #\{) (read-list))
     (else
      (let ((word (read-next-word))
@@ -172,5 +159,5 @@
 (require racket/trace)
 
 (when *trace*
-  (trace read-mapping read-list read-value read-structure)
+  (trace read-list read-value read-structure)
   (current-trace-notify (trace-if (enough-carets? 6))))

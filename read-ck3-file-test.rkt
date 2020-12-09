@@ -35,26 +35,26 @@ date=1170.3.22
 
 (check-equal?
  simple-save
- '(("meta_data"
-    ("save_game_version" . 3)
-    ("version" . "1.2.1")
-    ("portraits_version" . 3)
-    ("meta_date" . "1170.3.22")
-    ("meta_player_name" . "Samrajni Amro la Dame du Gange")
-    ("meta_title_name" . "Empire Pallava")
-    ("meta_coat_of_arms"
-     ("pattern" . "pattern_vertical_split_01.dds")
-     ("color1" . "yellow")
-     ("colored_emblem"
-      ("color1" . "orange")
-      ("color2" . "orange")
-      ("texture" . "ce_tiger_rampant.dds")
-      ("instance" ("scale" 0.9 0.9)))))
-   ("ironman_manager"
-    ("date" . "867.1.1")
-    ("save_game" . "")
-    ("save_storage" . "local"))
-   ("date" . "1170.3.22")))
+  '(("meta_data"
+     ("save_game_version" . 3)
+     ("version" . "\"1.2.1\"")
+     ("portraits_version" . 3)
+     ("meta_date" . "1170.3.22")
+     ("meta_player_name" . "\"Samrajni Amro la Dame du Gange\"")
+     ("meta_title_name" . "\"Empire Pallava\"")
+     ("meta_coat_of_arms"
+      ("pattern" . "\"pattern_vertical_split_01.dds\"")
+      ("color1" . "yellow")
+      ("colored_emblem"
+       ("color1" . "orange")
+       ("color2" . "orange")
+       ("texture" . "\"ce_tiger_rampant.dds\"")
+       ("instance" ("scale" 0.9 0.9)))))
+    ("ironman_manager"
+     ("date" . "867.1.1")
+     ("save_game" . "\"\"")
+     ("save_storage" . "local"))
+    ("date" . "1170.3.22")))
 
 (define list-of-structures-string "variables={
         data={ {
@@ -76,9 +76,14 @@ date=1170.3.22
 (define list-of-structures
   (read-ck3-file (open-input-string list-of-structures-string)))
 
-(check-equal? list-of-structures '(("variables"
-                                    ("data" (("flag" . "scottish_culture_creation") ("data" ("type" . "boolean") ("identity" . 1))) (("flag" . "visigothic_culture_split") ("data" ("type" . "boolean") ("identity" . 1)))))))
-
+(check-equal?
+ list-of-structures
+ '(("variables"
+    ("data"
+      (("flag" . "\"scottish_culture_creation\"")
+       ("data" ("type" . "boolean") ("identity" . 1)))
+      (("flag" . "\"visigothic_culture_split\"")
+       ("data" ("type" . "boolean") ("identity" . 1)))))))
 
 (define rgb-string "12029={
         key=\"x_mc_0\"
@@ -102,8 +107,8 @@ date=1170.3.22
 (define rgb (read-ck3-file (open-input-string rgb-string)))
 
 (check-equal? rgb '((12029
-   ("key" . "x_mc_0")
-   ("name" . "Bande ashanti")
+   ("key" . "\"x_mc_0\"")
+   ("name" . "\"Bande ashanti\"")
    ("date" . "1103.1.1")
    ("history"
     ("867.1.1" ("type" . "created") ("holder" . 9429))
