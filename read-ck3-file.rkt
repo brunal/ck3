@@ -48,12 +48,6 @@
       ((eq? ch #\}) (eat-next-char  #\}) #t)
       (else #f))))
 
-; reads the next word and swallows next-char.
-(define (read-word-and-eat-next-char next-char)
-  (let ((word (read-next-word)))
-    (eat-next-char next-char)
-    word))
-
 ; eats the next character, checking it has the expected value.
 (define (eat-next-char  char)
   (let ((ch (read-char)))
@@ -62,26 +56,21 @@
 
 ; reads and parses the next word, skipping whitespace and until the next = or \n or ' ' (unless in quotes).
 ; Note: quoted strings get unquoted. Upate that when parsing supports generating symbols.
-(define (read-next-word)
+(define (parse-next-word)
   (skip-whitespace)
   (define (read-as-list-until sentinels consume? (acc '()))
     (if (member (peek-char) sentinels)
         (if consume? (cons (read-char) acc) acc)
         (read-as-list-until sentinels consume? (cons (read-char) acc))))
-  (maybe-parse (list->string (reverse
+  (parse (list->string (reverse
                 (cond
                   ((eq? (peek-char) #\") (read-as-list-until '(#\") #t (list (read-char))))
                   (else (read-as-list-until '(#\= #\newline #\ ) #f)))))))
 
-(define (maybe-parse s)
-  (or (string->number s) s))
-
 ; tries parsing the list of chars as a string, a number, a date or a symbol.
 (define (parse s)
     (cond
-     ;((null? lst) (error (format "Gotta parse ~a/~a! ~a" lst s (error-context))))
-      ;((null? s) "NULL")
-      ((eq? (car (string->list s)) #\") (substring s 1 (sub1 (string-length substring))))
+      ((eq? (car (string->list s)) #\") (substring s 1 (sub1 (string-length s))))
       ((string->number s) => values)
       ((regexp-match
         #px"^([\\d]{3,4})\\.([\\d]{1,2})\\.([\\d]{1,2})$" s) => (lambda (matches) (cons 'date (map string->number (cdr matches)))))
@@ -97,8 +86,8 @@
 (define (read-value)
   (if (eq? (peek-char) #\{)
       (begin (read-char) (read-structure))
-      (let ((word (read-next-word)))
-        (if (equal? word "rgb")
+      (let ((word (parse-next-word)))
+        (if (eq? word 'rgb)
             (begin (eat-next-char #\ )
                    (eat-next-char #\{)
                    (read-list '(rgb)))
@@ -114,7 +103,7 @@
     ; ((eq? (peek-char) #\{) (read-char) (cons (read-structure) acc))
     ((eq? (peek-char) #\{) (read-list))
     (else
-     (let ((word (read-next-word))
+     (let ((word (parse-next-word))
            (next-char (read-char)))
        (read-structure
         (cons
@@ -158,6 +147,6 @@
 
 (require racket/trace)
 
-(when *trace*
-  (trace read-list read-value read-structure)
-  (current-trace-notify (trace-if (enough-carets? 6))))
+;(when *trace*
+;  (trace read-list read-value read-structure)
+;  (current-trace-notify (trace-if (enough-carets? 6))))
