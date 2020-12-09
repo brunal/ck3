@@ -3,21 +3,15 @@
 ; key1=value1
 ; key2=value3
 ; ..
-; where key can be an unquoted string or an integer
-; where value can be:
-; a structure, one of
-; * a list: { list-val1 list-val2 ... } where each is a structure or a quoted string or a number
-; * a mapping: { list-key1=list-val1 list-key2=list-val2 ... } like the top-level
-; an atom, one of
-; * an unquoted string
-; * a date (YYYY.MM?.DD?)
-; * a quoted string
-; * a number
-; rgb color: "rgb { a b c }"
+; where key can be an atom: a string, a number or a date
+; where value can be an atom, a list of values, a mapping or a mix of those 2.
 ; We parse that into a s-expression, where
-; * each mapping is a list of dotted pairs (key . value)
+; * a mapping a is a dotted pair
 ; * each list is a list
-; * base values are atoms  # note: we should produce either symbols, number, strings.
+; * atoms are symbols or numbers.
+; There is special handling for
+; * dates: atoms but turned into ('date y m d)
+; * rgb info: turned into '(color rgb r g b) instead of '((color . rgb) (r g b))
 
 (provide open-and-read-ck3-file read-ck3-file read-short-gamestate read-gamestate)
 
@@ -75,12 +69,6 @@
       #px"^([\\d]{3,4})\\.([\\d]{1,2})\\.([\\d]{1,2})$" s) => (lambda (matches) (cons 'date (map string->number (cdr matches)))))
     (else (string->symbol s))))
 
-; reads the value as an atom or a {....} structure or a rgb spec.
-; {...} is either a mapping or a list of integers or strings.
-; if we have an atom, we return it (as a number or a string).
-; if we have rgb { n n n }, return it as ('rgb n n n)
-; if we have a mapping, we return a (key . value) list.
-; if we have a list, we return it.
 (define (read-value)
   (let ((word (parse-next-word)))
     (cond
@@ -111,24 +99,3 @@
 
 (define (read-short-gamestate) (open-and-read-ck3-file "/Users/cauet/Documents/gamestate_start"))
 (define (read-gamestate) (open-and-read-ck3-file "/Users/cauet/Documents/gamestate"))
-
-
-; trace lines start with "> > >" or "< < <"
-(define *trace* #f)
-(define (enough-carets? n)
-  (define (carets-count-higher-than lst goal)
-    (cond
-      ((zero? goal) #t)
-      ((null? lst) #f)
-      ((member (car lst) '(#\> #\<)) (carets-count-higher-than (cddr lst) (- goal 1)))
-      (else #f)))
-  (lambda (s) (carets-count-higher-than (string->list s) n)))
-
-(define (trace-if pred)
-  (lambda (s) (when (pred s) (display s) (newline))))
-
-(require racket/trace)
-
-;(when *trace*
-;  (trace read-list read-value read-structure)
-;  (current-trace-notify (trace-if (enough-carets? 6))))
