@@ -13,14 +13,14 @@
 ; * dates: atoms but turned into ('date y m d)
 ; * rgb info: turned into '(color rgb r g b) instead of '((color . rgb) (r g b))
 
-(provide open-and-read-ck3-file read-ck3-file read-short-gamestate read-gamestate)
+(provide open-and-read-ck3-save read-ck3-save read-ck3-save load-gamestate dump-gamestate import-gamestate)
 
 ; opens and reads the save at the given path into a sexp.
-(define (open-and-read-ck3-file path)
-  (read-ck3-file (open-input-file path)))
+(define (open-and-read-ck3-save path)
+  (read-ck3-save (open-input-file path)))
 
 ; reads the given port into a sexp and closes it.
-(define (read-ck3-file port)
+(define (read-ck3-save port)
   (define original-port (current-input-port))
   (current-input-port port)
   (let ((result (read-structure)))
@@ -97,5 +97,13 @@
       ((eq? ch #\}) (read-char) #t)
       (else #f))))
 
-(define (read-short-gamestate) (open-and-read-ck3-file "/Users/cauet/Documents/gamestate_start"))
-(define (read-gamestate) (open-and-read-ck3-file "/Users/cauet/Documents/gamestate"))
+(define (dump-gamestate gamestate filename)
+  (let ((p (open-output-file filename #:exists 'replace)))
+    (write gamestate p)
+    (close-output-port p)))
+
+(define (import-gamestate filename)
+  (dump-gamestate (open-and-read-ck3-save filename) (string-append filename ".sexp")))
+
+(define (load-gamestate filename)
+  (read (open-input-file filename)))

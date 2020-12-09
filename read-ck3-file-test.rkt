@@ -31,7 +31,7 @@ ironman_manager={
 date=1170.3.22
 ")
 (define simple-save
-  (read-ck3-file (open-input-string simple-save-string)))
+  (read-ck3-save (open-input-string simple-save-string)))
 
 (check-equal?
  simple-save
@@ -71,7 +71,7 @@ date=1170.3.22
 }
 }")
 (define list-of-structures
-  (read-ck3-file (open-input-string list-of-structures-string)))
+  (read-ck3-save (open-input-string list-of-structures-string)))
 
 (check-equal?
  list-of-structures
@@ -101,7 +101,7 @@ date=1170.3.22
         definite_form=yes
         coat_of_arms_id=2191
 }")
-(define rgb (read-ck3-file (open-input-string rgb-string)))
+(define rgb (read-ck3-save (open-input-string rgb-string)))
 (check-equal?
  rgb
  '((12029
@@ -133,7 +133,7 @@ date=1170.3.22
 
 
 (define hybrid-structure-string "levels={ 10 0=1 1=2 }")
-(define hybrid-structure (read-ck3-file (open-input-string hybrid-structure-string)))
+(define hybrid-structure (read-ck3-save (open-input-string hybrid-structure-string)))
 (check-equal? hybrid-structure '((levels
    10
    (0 . 1)
