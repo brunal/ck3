@@ -55,26 +55,28 @@
       (error (format "Next char must be ~@c, got ~@c, ~s" char ch (error-context))))))
 
 ; reads and parses the next word, skipping whitespace and until the next = or \n or ' ' (unless in quotes).
-; Note: quoted strings get unquoted. Upate that when parsing supports generating symbols.
 (define (parse-next-word)
   (skip-whitespace)
-  (define (read-as-list-until sentinels consume? (acc '()))
-    (if (member (peek-char) sentinels)
-        (if consume? (cons (read-char) acc) acc)
-        (read-as-list-until sentinels consume? (cons (read-char) acc))))
-  (parse (list->string (reverse
-                (cond
-                  ((eq? (peek-char) #\") (read-as-list-until '(#\") #t (list (read-char))))
-                  (else (read-as-list-until '(#\= #\newline #\ ) #f)))))))
+  (cond
+    ((eq? (peek-char) #\{) (read-char))
+    (else
+     (define (read-as-list-until sentinels consume? (acc '()))
+       (if (member (peek-char) sentinels)
+           (if consume? (cons (read-char) acc) acc)
+           (read-as-list-until sentinels consume? (cons (read-char) acc))))
+     (parse (list->string (reverse
+                           (cond
+                             ((eq? (peek-char) #\") (read-as-list-until '(#\") #t (list (read-char))))
+                             (else (read-as-list-until '(#\= #\newline #\ ) #f)))))))))
 
 ; tries parsing the list of chars as a string, a number, a date or a symbol.
 (define (parse s)
-    (cond
-      ((eq? (car (string->list s)) #\") (substring s 1 (sub1 (string-length s))))
-      ((string->number s) => values)
-      ((regexp-match
-        #px"^([\\d]{3,4})\\.([\\d]{1,2})\\.([\\d]{1,2})$" s) => (lambda (matches) (cons 'date (map string->number (cdr matches)))))
-      (else (string->symbol s))))
+  (cond
+    ((eq? (car (string->list s)) #\") (substring s 1 (sub1 (string-length s))))
+    ((string->number s) => values)
+    ((regexp-match
+      #px"^([\\d]{3,4})\\.([\\d]{1,2})\\.([\\d]{1,2})$" s) => (lambda (matches) (cons 'date (map string->number (cdr matches)))))
+    (else (string->symbol s))))
 
 
 ; reads the value as an atom or a {....} structure or a rgb spec.
@@ -84,42 +86,24 @@
 ; if we have a mapping, we return a (key . value) list.
 ; if we have a list, we return it.
 (define (read-value)
-  (if (eq? (peek-char) #\{)
-      (begin (read-char) (read-structure))
-      (let ((word (parse-next-word)))
-        (if (eq? word 'rgb)
-            (begin (eat-next-char #\ )
-                   (eat-next-char #\{)
-                   (read-list '(rgb)))
-            word))))
+  (let ((word (parse-next-word)))
+    (cond
+      ((eq? word #\{) (read-structure))
+      ((eq? word 'rgb) (skip-whitespace) (eat-next-char #\{) (read-structure '(rgb)))
+      (else word))))
 
 ; reads the upcoming {...} structure into a mapping or a list depending on
 ; whether a = can be found after the next word. { already eaten.
 (define (read-structure (acc '()))
   (skip-whitespace)
-  (cond
-    ((consume-structure-end?) (reverse acc))
-    ; nested list
-    ; ((eq? (peek-char) #\{) (read-char) (cons (read-structure) acc))
-    ((eq? (peek-char) #\{) (read-list))
-    (else
-     (let ((word (parse-next-word))
-           (next-char (read-char)))
-       (read-structure
-        (cons
-         (cond
-         ((eq? next-char #\=) (cons word (read-value)))
-         ((eq? next-char #\ ) word)
-         (else (error (string-append "char is not equal or space but '" (string next-char) "', " (error-context)))))
-         acc))))))
-
-; reads a list of integers, strings or structures.
-(define (read-list (acc '()))
   (if (consume-structure-end?)
       (reverse acc)
-      (let ((item (read-value)))
-        (skip-whitespace)
-        (read-list (cons item acc)))))
+      (let ((word (parse-next-word))
+            (next-char (read-char)))
+        (cond
+          ((eq? word #\{) (read-structure (cons (read-structure) acc)))
+          ((eq? next-char #\=) (read-structure (cons (cons word (read-value)) acc)))
+          (else (read-structure (cons word acc)))))))
 
 (define (error-context)
   (let ((position (file-position (current-input-port)))
