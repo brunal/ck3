@@ -38,12 +38,13 @@
   (skip-whitespace)
   (if (consume-structure-end?)
       (reverse acc)
-      (let ((word (parse-next-word))
-            (next-char (read-char)))
-        (cond
-          ((eq? word #\{) (read-structure (cons (read-structure) acc)))
-          ((eq? next-char #\=) (read-structure (cons (cons word (read-value)) acc)))
-          (else (read-structure (cons word acc)))))))
+      (read-structure
+       (let ((word (parse-next-word))
+             (next-char (read-char)))
+         (cond
+           ((eq? word #\{) (cons (read-structure) acc))
+           ((eq? next-char #\=) (cons (cons word (read-value)) acc))
+           (else (cons word acc)))))))
 
 ; reads and parses the next word, skipping whitespace and until the next = or \n or ' ' (unless in quotes).
 (define (parse-next-word)
