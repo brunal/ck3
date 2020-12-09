@@ -39,20 +39,17 @@
     (read-char)
     (skip-whitespace)))
 
-; returns whether we're at the end of a structure ('}'), and consumes it.
-; Also accepts eof for closing a structure, which makes it work for the top-level mapping.
-(define (consume-structure-end?)
-  (let ((ch (peek-char)))
-    (cond
-      ((eof-object? ch) #t)
-      ((eq? ch #\}) (eat-next-char  #\}) #t)
-      (else #f))))
-
-; eats the next character, checking it has the expected value.
-(define (eat-next-char  char)
-  (let ((ch (read-char)))
-    (unless (eq? ch char)
-      (error (format "Next char must be ~@c, got ~@c, ~s" char ch (error-context))))))
+; reads the upcoming {...} structure into a mapping or a list. { already eaten.
+(define (read-structure (acc '()))
+  (skip-whitespace)
+  (if (consume-structure-end?)
+      (reverse acc)
+      (let ((word (parse-next-word))
+            (next-char (read-char)))
+        (cond
+          ((eq? word #\{) (read-structure (cons (read-structure) acc)))
+          ((eq? next-char #\=) (read-structure (cons (cons word (read-value)) acc)))
+          (else (read-structure (cons word acc)))))))
 
 ; reads and parses the next word, skipping whitespace and until the next = or \n or ' ' (unless in quotes).
 (define (parse-next-word)
@@ -78,7 +75,6 @@
       #px"^([\\d]{3,4})\\.([\\d]{1,2})\\.([\\d]{1,2})$" s) => (lambda (matches) (cons 'date (map string->number (cdr matches)))))
     (else (string->symbol s))))
 
-
 ; reads the value as an atom or a {....} structure or a rgb spec.
 ; {...} is either a mapping or a list of integers or strings.
 ; if we have an atom, we return it (as a number or a string).
@@ -92,24 +88,26 @@
       ((eq? word 'rgb) (skip-whitespace) (eat-next-char #\{) (read-structure '(rgb)))
       (else word))))
 
-; reads the upcoming {...} structure into a mapping or a list depending on
-; whether a = can be found after the next word. { already eaten.
-(define (read-structure (acc '()))
-  (skip-whitespace)
-  (if (consume-structure-end?)
-      (reverse acc)
-      (let ((word (parse-next-word))
-            (next-char (read-char)))
-        (cond
-          ((eq? word #\{) (read-structure (cons (read-structure) acc)))
-          ((eq? next-char #\=) (read-structure (cons (cons word (read-value)) acc)))
-          (else (read-structure (cons word acc)))))))
+; eats the next character, checking it has the expected value.
+(define (eat-next-char char)
+  (let ((ch (read-char)))
+    (unless (eq? ch char)
+      (error (format "Next char must be ~@c, got ~@c, ~s" char ch (error-context))))))
 
 (define (error-context)
   (let ((position (file-position (current-input-port)))
         (this-line (read-line))
         (next-line (read-line)))
     (format "at position ~s, next bits: ~s ~s" position this-line next-line)))
+
+; returns whether we're at the end of a structure ('}'), and consumes it.
+; Also accepts eof for closing a structure, which makes it work for the top-level mapping.
+(define (consume-structure-end?)
+  (let ((ch (peek-char)))
+    (cond
+      ((eof-object? ch) #t)
+      ((eq? ch #\}) (read-char) #t)
+      (else #f))))
 
 (define (read-short-gamestate) (open-and-read-ck3-file "/Users/cauet/Documents/gamestate_start"))
 (define (read-gamestate) (open-and-read-ck3-file "/Users/cauet/Documents/gamestate"))
