@@ -1,6 +1,6 @@
 #lang racket
 
-(require rackunit "read-ck3-file.rkt")
+(require rackunit "load-gamestate.rkt")
 
 
 (define simple-save-string "meta_data={
